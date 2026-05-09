@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block title %}{{ req.method }} {{ req.path }} — HookPilot{% endblock %}
+
+{% block nav_actions %}
+<a href="/b/{{ req.slug }}" class="text-slate-400 hover:text-white text-sm flex items-center gap-1 transition-colors">
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+  </svg>
+  {{ req.bucket_name }}
+</a>
+{% endblock %}
+
+{% block main_class %}max-w-5xl mx-auto px-6 py-8{% endblock %}
+
+{% block content %}
+<!-- Request header -->
+<div class="mb-6">
+  <div class="flex items-center gap-3 mb-2">
+    {% set mc = method_color(req.method) %}
+    <span class="{{ mc }} text-white text-sm font-bold px-3 py-1 rounded">{{ req.method }}</span>
+    <span class="text-white font-mono text-lg">{{ req.path }}</span>
+    {% if req.query_string %}
+    <span class="text-slate-400 font-mono text-sm">?{{ req.query_string }}</span>
+    {% endif %}
+  </div>
+  <div class="flex items-center gap-4 text-sm text-slate-500">
+    <span>{{ req.created_at }}</span>
+    <span>·</span>
+    <span>{{ req.client_ip }}</span>
+    <span>·</span>
+    <span>{{ req.size_bytes }} bytes</span>
+    {% if req.content_type %}
+    <span>·</span>
+    <span>{{ req.content_type }}</span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Action buttons -->
+<div class="flex items-center gap-3 mb-6">
+  <button id="copy-curl-btn" onclick="copyCurl()"
+          class="flex items-center gap-2 text-sm text-slate-300 hover:text-white border border-slate-700 hover:border-slate-500 rounded-lg px-4 py-2 transition-colors">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+    </svg>
+    Copy as curl
+  </button>
+  <button onclick="document.getElementById('replay-section').classList.toggle('hidden')"
+          class="flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 border border-indigo-700 hover:border-indigo-500 rounded-lg px-4 py-2 transition-colors">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+    </svg>
+    Replay
+  </button>
+  <button onclick="deleteAndGo()"
+          class="flex items-center gap-2 text-sm text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-700 rounded-lg px-4 py-2 transition-colors">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+    </svg>
+    Delete
+  </button>
+</div>
+
+<!-- Replay section -->
+<div id="replay-section" class="hidden card p-5 mb-6">
+  <h3 class="font-medium text-white mb-3">Replay to a different endpoint</h3>
+  <div class="flex gap-3">
+    <input type="url" id="replay-url" placeholder="https://localhost:3000/webhook"
+           class="flex-1" value="{{ webhook_url }}"/>
+    <button onclick="sendReplay()"
+            class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-5 rounded-lg transition-colors">
+      Send
+    </button>
+  </div>
+  <div id="replay-result" class="hidden mt-4"></div>
+</div>
+
+<!-- Tabs -->
+<div class="card overflow-hidden">
+  <div class="border-b border-slate-700 flex px-4">
+    {% for name, label in [('body','Body'), ('headers','Headers'), ('query','Query'), ('replays','Replays (' ~ replays|length ~ ')')] %}
+    <button class="tab-btn py-3 px-2 mr-4 text-sm text-slate-400 hover:text-white transition-colors {{ 'active' if name == 'body' else '' }}"
+            data-tab-btn="main" data-tab-name="{{ name }}"
+            onclick="switchTab('main','{{ name }}')">{{ label }}</button>
+    {% endfor %}
+  </div>
+
+  <!-- Body -->
+  <div id="tab-main-body" data-tab-group="main" class="p-4">
+    {% if req.body %}
+    <pre class="overflow-auto max-h-[60vh]"><code class="language-{{ 'json' if req.body_is_json else 'text' }}">{{ req.body_pretty }}</code></pre>
+    {% else %}
+    <p class="text-slate-500 italic text-sm">No body</p>
+    {% endif %}
+  </div>
+
+  <!-- Headers -->
+  <div id="tab-main-headers" data-tab-group="main" class="hidden p-4">
+    <table class="w-full">
+      <tbody>
+        {% for k, v in req.headers_parsed.items() %}
+        <tr class="border-b border-slate-800">
+          <td class="py-2.5 pr-6 text-slate-400 text-sm font-mono w-1/3">{{ k }}</td>
+          <td class="py-2.5 text-slate-200 text-sm font-mono break-all">{{ v }}</td>
+        </tr>
+        {% else %}
+        <tr><td class="text-slate-500 text-sm italic">No headers</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Query params -->
+  <div id="tab-main-query" data-tab-group="main" class="hidden p-4">
+    {% if req.query_parsed %}
+    <table class="w-full">
+      <tbody>
+        {% for k, v in req.query_parsed.items() %}
+        <tr class="border-b border-slate-800">
+          <td class="py-2.5 pr-6 text-slate-400 text-sm font-mono w-1/3">{{ k }}</td>
+          <td class="py-2.5 text-slate-200 text-sm font-mono break-all">{{ v }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-slate-500 italic text-sm">No query parameters</p>
+    {% endif %}
+  </div>
+
+  <!-- Replays -->
+  <div id="tab-main-replays" data-tab-group="main" class="hidden p-4">
+    {% if replays %}
+    <div class="space-y-3">
+      {% for rp in replays %}
+      {% set sc = rp.response_status %}
+      <div class="bg-slate-900 rounded-lg p-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-mono text-sm text-slate-300">{{ rp.target_url }}</span>
+          <div class="flex items-center gap-3 text-sm">
+            {% if sc %}
+            <span class="{{ status_color(sc) }} font-bold">{{ sc }}</span>
+            {% elif rp.error %}
+            <span class="text-red-400 font-bold">ERR</span>
+            {% endif %}
+            <span class="text-slate-500">{{ rp.latency_ms }}ms</span>
+            <span class="text-slate-600 text-xs" data-ts="{{ rp.created_at }}">{{ rp.created_at }}</span>
+          </div>
+        </div>
+        {% if rp.error %}
+        <p class="text-red-400 text-sm">{{ rp.error }}</p>
+        {% endif %}
+        {% if rp.response_body %}
+        <pre class="overflow-auto max-h-48 mt-2"><code class="language-text">{{ rp.response_body[:2000] }}</code></pre>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-slate-500 italic text-sm">No replays yet. Use the Replay button above.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const REQ_ID = '{{ req.id }}';
+const BUCKET_SLUG = '{{ req.slug }}';
+
+async function copyCurl() {
+  const res = await fetch(`/api/requests/${REQ_ID}/curl`);
+  const data = await res.json();
+  const btn = document.getElementById('copy-curl-btn');
+  navigator.clipboard.writeText(data.curl).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Copied!';
+    btn.classList.add('text-green-400');
+    setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('text-green-400'); }, 1500);
+  });
+}
+
+async function sendReplay() {
+  const url = document.getElementById('replay-url').value;
+  if (!url) return;
+  const resultEl = document.getElementById('replay-result');
+  resultEl.innerHTML = '<div class="flex items-center gap-2 text-slate-400 text-sm"><div class="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div> Sending...</div>';
+  resultEl.classList.remove('hidden');
+
+  const res = await fetch(`/api/requests/${REQ_ID}/replay`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({target_url: url}),
+  });
+  const data = await res.json();
+
+  if (data.error) {
+    resultEl.innerHTML = `<p class="text-red-400 text-sm">Error: ${data.error}</p>`;
+  } else {
+    const col = data.status < 300 ? 'text-green-400' : data.status < 400 ? 'text-amber-400' : 'text-red-400';
+    resultEl.innerHTML = `
+      <div class="flex items-center gap-3 mb-2">
+        <span class="${col} font-bold text-lg">${data.status}</span>
+        <span class="text-slate-400 text-sm">${data.latency_ms}ms</span>
+      </div>
+      ${data.response_body
+        ? `<pre class="overflow-auto max-h-48 text-sm"><code class="language-text">${data.response_body.substring(0,1000)}</code></pre>`
+        : ''}`;
+    Prism.highlightAll();
+  }
+}
+
+async function deleteAndGo() {
+  if (!confirm('Delete this request?')) return;
+  await fetch(`/api/requests/${REQ_ID}`, {method: 'DELETE'});
+  window.location.href = `/b/${BUCKET_SLUG}`;
+}
+</script>
+{% endblock %}

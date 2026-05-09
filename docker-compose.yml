@@ -1,0 +1,18 @@
+services:
+  hookpilot:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - BASE_URL=${BASE_URL:-http://localhost:8000}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - REQUEST_RETENTION_DAYS=${REQUEST_RETENTION_DAYS:-30}
+      - MAX_REQUESTS_PER_BUCKET=${MAX_REQUESTS_PER_BUCKET:-500}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

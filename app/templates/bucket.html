@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+{% block title %}{{ bucket.name }} — HookPilot{% endblock %}
+
+{% block nav_actions %}
+<a href="/" class="text-slate-400 hover:text-white text-sm flex items-center gap-1 transition-colors">
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+  </svg>
+  Dashboard
+</a>
+{% endblock %}
+
+{% block main_class %}h-[calc(100vh-57px)] flex flex-col{% endblock %}
+
+{% block content %}
+<!-- Bucket header -->
+<div class="border-b border-slate-700 bg-slate-900 px-6 py-3 flex items-center justify-between flex-shrink-0">
+  <div class="flex items-center gap-4">
+    <div>
+      <h1 class="font-semibold text-white">{{ bucket.name }}</h1>
+      {% if bucket.description %}
+      <p class="text-slate-400 text-xs">{{ bucket.description }}</p>
+      {% endif %}
+    </div>
+    <div class="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5">
+      <span class="text-slate-400 text-xs font-mono" id="webhook-url">{{ webhook_url }}</span>
+      <button onclick="copyText('{{ webhook_url }}', this)" class="copy-btn text-slate-400 ml-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <span class="flex items-center gap-1.5 text-xs text-green-400">
+      <span class="live-dot w-2 h-2 rounded-full bg-green-400 inline-block"></span>
+      LIVE
+    </span>
+    <span class="text-xs text-slate-500">{{ total }} request{{ 's' if total != 1 else '' }}</span>
+    <button onclick="document.getElementById('modal-settings').classList.remove('hidden')"
+            class="text-slate-400 hover:text-white transition-colors" title="Settings">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+    </button>
+    <button onclick="confirmDelete()" class="text-slate-400 hover:text-red-400 transition-colors" title="Delete bucket">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- Two-pane layout -->
+<div class="flex flex-1 min-h-0">
+
+  <!-- Request list (left) -->
+  <div class="w-80 flex-shrink-0 border-r border-slate-700 flex flex-col min-h-0">
+    <div class="px-4 py-2 text-xs text-slate-500 border-b border-slate-800 flex items-center justify-between">
+      <span>Requests</span>
+      <button onclick="clearAll()" class="hover:text-red-400 transition-colors" title="Clear all">Clear</button>
+    </div>
+    <div id="request-list" class="flex-1 overflow-y-auto divide-y divide-slate-800">
+      {% for r in requests %}
+      <div class="req-row px-4 py-3 flex items-start gap-3"
+           data-req-id="{{ r.id }}"
+           onclick="loadRequest('{{ r.id }}', this)">
+        <span class="method-{{ r.method }} text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5">
+          {{ r.method }}
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="text-slate-200 text-xs font-mono truncate">{{ r.path }}</p>
+          <p class="text-slate-500 text-[11px] mt-0.5">
+            <span data-ts="{{ r.created_at }}">{{ r.created_at }}</span>
+            {% if r.size_bytes > 0 %}· {{ r.size_bytes }}B{% endif %}
+          </p>
+        </div>
+      </div>
+      {% endfor %}
+      {% if not requests %}
+      <div id="empty-state" class="flex flex-col items-center justify-center py-12 text-center px-4">
+        <p class="text-slate-500 text-sm">Waiting for requests...</p>
+        <p class="text-slate-600 text-xs mt-1">Send a webhook to the URL above</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Detail pane (right) -->
+  <div id="detail-pane" class="flex-1 overflow-y-auto">
+    <div class="flex flex-col items-center justify-center h-full text-center p-8">
+      <div class="w-16 h-16 rounded-xl bg-slate-800 flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+      </div>
+      <p class="text-slate-500">Select a request to inspect it</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- Settings Modal -->
+<div id="modal-settings"
+     class="hidden fixed inset-0 bg-black/60 modal-overlay z-50 flex items-center justify-center p-4"
+     onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="card w-full max-w-md p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="text-lg font-semibold text-white">Bucket Settings</h2>
+      <button onclick="document.getElementById('modal-settings').classList.add('hidden')"
+              class="text-slate-400 hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm text-slate-400 mb-1.5">Name</label>
+        <input type="text" id="s-name" value="{{ bucket.name }}" class="w-full"/>
+      </div>
+      <div>
+        <label class="block text-sm text-slate-400 mb-1.5">Description</label>
+        <input type="text" id="s-desc" value="{{ bucket.description }}" class="w-full"/>
+      </div>
+      <div>
+        <label class="block text-sm text-slate-400 mb-1.5">Auto-forward URL</label>
+        <input type="url" id="s-forward" value="{{ bucket.forward_url }}" class="w-full" placeholder="https://..."/>
+      </div>
+      <div>
+        <label class="block text-sm text-slate-400 mb-1.5">Telegram Chat ID</label>
+        <input type="text" id="s-tg" value="{{ bucket.telegram_chat_id }}" class="w-full"/>
+      </div>
+    </div>
+    <div id="settings-msg" class="hidden mt-3 text-sm"></div>
+    <button onclick="saveSettings()"
+            class="mt-5 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-lg transition-colors">
+      Save
+    </button>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const BUCKET_SLUG = '{{ bucket.slug }}';
+let currentReqId = null;
+
+// Load request detail into right pane
+async function loadRequest(reqId, rowEl) {
+  document.querySelectorAll('.req-row').forEach(r => r.classList.remove('selected'));
+  rowEl.classList.add('selected');
+  currentReqId = reqId;
+
+  document.getElementById('detail-pane').innerHTML = `
+    <div class="flex items-center justify-center h-32">
+      <div class="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+    </div>`;
+
+  const res = await fetch(`/api/requests/${reqId}`);
+  if (!res.ok) { return; }
+  const req = await res.json();
+  renderDetail(req);
+}
+
+function renderDetail(req) {
+  const methodColors = {GET:'bg-blue-500',POST:'bg-green-500',PUT:'bg-amber-500',
+    PATCH:'bg-purple-500',DELETE:'bg-red-500',HEAD:'bg-slate-500',OPTIONS:'bg-teal-500'};
+  const mc = methodColors[req.method] || 'bg-slate-500';
+
+  let bodyHtml = '';
+  if (req.body) {
+    let lang = 'text', displayBody = req.body;
+    if ((req.content_type||'').includes('json')) {
+      lang = 'json';
+      try { displayBody = JSON.stringify(JSON.parse(req.body), null, 2); } catch(e){}
+    } else if ((req.content_type||'').includes('xml')) {
+      lang = 'xml';
+    }
+    bodyHtml = `<pre class="overflow-auto max-h-96"><code class="language-${lang}">${escHtml(displayBody)}</code></pre>`;
+  } else {
+    bodyHtml = `<p class="text-slate-500 text-sm italic">No body</p>`;
+  }
+
+  const hdrs = Object.entries(req.headers).map(([k,v]) =>
+    `<tr class="border-b border-slate-800">
+      <td class="py-2 pr-4 text-slate-400 text-xs font-mono">${escHtml(k)}</td>
+      <td class="py-2 text-slate-200 text-xs font-mono break-all">${escHtml(v)}</td>
+    </tr>`).join('');
+
+  const query = req.query_string ? req.query_string.split('&').map(p => {
+    const [k,...v] = p.split('=');
+    return `<tr class="border-b border-slate-800">
+      <td class="py-2 pr-4 text-slate-400 text-xs font-mono">${escHtml(decodeURIComponent(k))}</td>
+      <td class="py-2 text-slate-200 text-xs font-mono">${escHtml(decodeURIComponent(v.join('=')))}</td>
+    </tr>`;
+  }).join('') : '';
+
+  const replayRows = (req.replays||[]).map(rp => {
+    const sc = rp.response_status;
+    const col = sc && sc < 300 ? 'text-green-400' : sc ? 'text-red-400' : 'text-slate-400';
+    return `<div class="flex items-center justify-between py-2 border-b border-slate-800 text-xs">
+      <span class="text-slate-300 font-mono truncate max-w-xs">${escHtml(rp.target_url)}</span>
+      <div class="flex items-center gap-3">
+        <span class="${col} font-medium">${sc || (rp.error ? 'ERR' : '—')}</span>
+        <span class="text-slate-500">${rp.latency_ms}ms</span>
+        <span class="text-slate-500" data-ts="${rp.created_at}">${rp.created_at}</span>
+      </div>
+    </div>`;
+  }).join('') || '<p class="text-slate-500 text-sm italic py-2">No replays yet</p>';
+
+  const curlBtn = `<button onclick="copyCurl('${req.id}')" class="copy-btn flex items-center gap-1.5 text-sm text-slate-400 hover:text-indigo-300 transition-colors border border-slate-700 rounded-lg px-3 py-1.5">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+    Copy as curl
+  </button>`;
+
+  document.getElementById('detail-pane').innerHTML = `
+  <div class="p-6">
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="${mc} text-white text-xs font-bold px-2 py-0.5 rounded">${req.method}</span>
+          <span class="text-white font-mono text-sm">${escHtml(req.path)}${req.query_string ? '?'+escHtml(req.query_string) : ''}</span>
+        </div>
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span data-ts="${req.created_at}">${req.created_at}</span>
+          <span>·</span>
+          <span>${req.client_ip}</span>
+          <span>·</span>
+          <span>${req.size_bytes} bytes</span>
+          ${req.content_type ? `<span>· ${escHtml(req.content_type)}</span>` : ''}
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        ${curlBtn}
+        <button onclick="document.getElementById('replay-panel').classList.toggle('hidden')"
+                class="flex items-center gap-1.5 text-sm text-indigo-400 hover:text-indigo-300 transition-colors border border-indigo-700 rounded-lg px-3 py-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Replay
+        </button>
+        <button onclick="deleteRequest('${req.id}')"
+                class="text-slate-500 hover:text-red-400 transition-colors border border-slate-700 hover:border-red-700 rounded-lg px-2 py-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Replay panel -->
+    <div id="replay-panel" class="hidden mb-4 card p-4">
+      <p class="text-sm font-medium text-white mb-3">Replay to a different URL</p>
+      <div class="flex gap-2">
+        <input type="url" id="replay-url" placeholder="https://localhost:3000/webhook" class="flex-1 text-sm"/>
+        <button onclick="sendReplay('${req.id}')"
+                class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-4 rounded-lg transition-colors flex-shrink-0">
+          Send
+        </button>
+      </div>
+      <div id="replay-result" class="mt-3 hidden"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="border-b border-slate-700 flex gap-4 mb-4">
+      ${[['body','Body'],['headers','Headers'],['query','Query'],['replays','Replays']].map(([name,label]) =>
+        `<button class="tab-btn pb-2 text-sm text-slate-400 hover:text-white transition-colors ${name==='body'?'active':''}"
+                 data-tab-btn="req" data-tab-name="${name}"
+                 onclick="switchTab('req','${name}')">${label}</button>`
+      ).join('')}
+    </div>
+
+    <div id="tab-req-body" data-tab-group="req">${bodyHtml}</div>
+    <div id="tab-req-headers" data-tab-group="req" class="hidden">
+      <table class="w-full"><tbody>${hdrs || '<tr><td class="text-slate-500 text-sm">No headers</td></tr>'}</tbody></table>
+    </div>
+    <div id="tab-req-query" data-tab-group="req" class="hidden">
+      ${query ? `<table class="w-full"><tbody>${query}</tbody></table>` : '<p class="text-slate-500 text-sm italic">No query parameters</p>'}
+    </div>
+    <div id="tab-req-replays" data-tab-group="req" class="hidden">${replayRows}</div>
+  </div>`;
+
+  refreshTimestamps();
+  Prism.highlightAll();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function copyCurl(reqId) {
+  const res = await fetch(`/api/requests/${reqId}/curl`);
+  const data = await res.json();
+  navigator.clipboard.writeText(data.curl).then(() => {
+    showToast('Copied to clipboard!');
+  });
+}
+
+async function sendReplay(reqId) {
+  const url = document.getElementById('replay-url').value;
+  if (!url) return;
+  const resultEl = document.getElementById('replay-result');
+  resultEl.innerHTML = '<div class="flex items-center gap-2 text-slate-400 text-sm"><div class="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div> Sending...</div>';
+  resultEl.classList.remove('hidden');
+
+  const res = await fetch(`/api/requests/${reqId}/replay`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({target_url: url}),
+  });
+  const data = await res.json();
+
+  if (data.error) {
+    resultEl.innerHTML = `<p class="text-red-400 text-sm">Error: ${escHtml(data.error)}</p>`;
+  } else {
+    const col = data.status < 300 ? 'text-green-400' : data.status < 400 ? 'text-amber-400' : 'text-red-400';
+    resultEl.innerHTML = `
+      <div class="flex items-center gap-3 text-sm">
+        <span class="${col} font-bold">${data.status}</span>
+        <span class="text-slate-400">${data.latency_ms}ms</span>
+      </div>
+      ${data.response_body ? `<pre class="mt-2 max-h-40 overflow-auto text-xs text-slate-300">${escHtml(data.response_body.substring(0,500))}</pre>` : ''}`;
+  }
+}
+
+async function deleteRequest(reqId) {
+  if (!confirm('Delete this request?')) return;
+  await fetch(`/api/requests/${reqId}`, {method: 'DELETE'});
+  document.querySelector(`[data-req-id="${reqId}"]`)?.remove();
+  document.getElementById('detail-pane').innerHTML = `
+    <div class="flex items-center justify-center h-full text-slate-500 text-sm">Request deleted</div>`;
+}
+
+async function clearAll() {
+  if (!confirm('Delete ALL requests in this bucket?')) return;
+  const rows = document.querySelectorAll('.req-row[data-req-id]');
+  for (const row of rows) {
+    await fetch(`/api/requests/${row.dataset.reqId}`, {method: 'DELETE'});
+    row.remove();
+  }
+  document.getElementById('detail-pane').innerHTML = `
+    <div class="flex items-center justify-center h-full text-slate-500 text-sm">All requests cleared</div>`;
+}
+
+async function confirmDelete() {
+  if (!confirm(`Delete bucket "${BUCKET_SLUG}" and all its requests?`)) return;
+  await fetch(`/api/buckets/${BUCKET_SLUG}`, {method: 'DELETE'});
+  window.location.href = '/';
+}
+
+async function saveSettings() {
+  const msgEl = document.getElementById('settings-msg');
+  const payload = {
+    name: document.getElementById('s-name').value,
+    description: document.getElementById('s-desc').value,
+    forward_url: document.getElementById('s-forward').value,
+    telegram_chat_id: document.getElementById('s-tg').value,
+  };
+  const res = await fetch(`/api/buckets/${BUCKET_SLUG}`, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) {
+    msgEl.textContent = 'Saved!';
+    msgEl.className = 'mt-3 text-sm text-green-400';
+    msgEl.classList.remove('hidden');
+    setTimeout(() => {
+      document.getElementById('modal-settings').classList.add('hidden');
+      location.reload();
+    }, 800);
+  } else {
+    msgEl.textContent = 'Save failed';
+    msgEl.className = 'mt-3 text-sm text-red-400';
+    msgEl.classList.remove('hidden');
+  }
+}
+
+// Toast notification
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'fixed bottom-6 right-6 bg-slate-800 border border-slate-600 text-white text-sm px-4 py-2.5 rounded-lg shadow-lg z-50 transition-all';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+// SSE live updates
+const evtSource = new EventSource(`/api/stream/${BUCKET_SLUG}`);
+evtSource.onmessage = function(e) {
+  const req = JSON.parse(e.data);
+  const methodColors = {GET:'bg-blue-500',POST:'bg-green-500',PUT:'bg-amber-500',
+    PATCH:'bg-purple-500',DELETE:'bg-red-500',HEAD:'bg-slate-500',OPTIONS:'bg-teal-500'};
+  const mc = methodColors[req.method] || 'bg-slate-500';
+
+  // Remove empty state
+  document.getElementById('empty-state')?.remove();
+
+  const div = document.createElement('div');
+  div.className = 'req-row px-4 py-3 flex items-start gap-3 bg-slate-800/60';
+  div.dataset.reqId = req.id;
+  div.setAttribute('onclick', `loadRequest('${req.id}', this)`);
+  div.innerHTML = `
+    <span class="${mc} text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5">${req.method}</span>
+    <div class="min-w-0 flex-1">
+      <p class="text-slate-200 text-xs font-mono truncate">${req.path}</p>
+      <p class="text-slate-500 text-[11px] mt-0.5">
+        <span data-ts="${req.created_at}">just now</span>
+        ${req.size_bytes > 0 ? '· '+req.size_bytes+'B' : ''}
+      </p>
+    </div>`;
+  document.getElementById('request-list').prepend(div);
+
+  // Flash highlight fades out
+  setTimeout(() => div.classList.remove('bg-slate-800/60'), 2000);
+};
+evtSource.onerror = function() {};
+</script>
+{% endblock %}

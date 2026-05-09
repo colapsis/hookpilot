@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <!-- Background gradient: deep indigo → rich violet -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#1a1060"/>
+      <stop offset="100%" stop-color="#3b0764"/>
+    </linearGradient>
+
+    <!-- Mark gradient: bright white-indigo → deep violet -->
+    <linearGradient id="mark" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%"   stop-color="#f0f4ff"/>
+      <stop offset="45%"  stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+
+    <!-- Subtle glow behind the mark -->
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <!-- Inner border gradient -->
+    <linearGradient id="border" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="rgba(167,139,250,0.5)"/>
+      <stop offset="100%" stop-color="rgba(109,40,217,0.1)"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="100" height="100" rx="22" ry="22" fill="url(#bg)"/>
+
+  <!-- Subtle inner border -->
+  <rect width="100" height="100" rx="22" ry="22" fill="none"
+        stroke="url(#border)" stroke-width="1.5"/>
+
+  <!-- Glow layer (blurred copy behind mark) -->
+  <path opacity="0.35" fill="#a78bfa" filter="url(#glow)"
+    d="M61 11 L34 53 L49 53 L43 70
+       C40 81 43 93 53 95
+       C64 97 74 87 71 75
+       L67 69
+       C67 79 61 87 55 86
+       C49 84 49 73 52 65
+       L58 53 L73 53 Z"/>
+
+  <!-- Hook-bolt mark -->
+  <!-- Upper half: classic lightning bolt shape going down-left               -->
+  <!-- Lower half: instead of a point, curves into a fishhook (hook = webhook) -->
+  <path fill="url(#mark)"
+    d="M61 11
+       L34 53 L49 53
+       L43 70
+       C40 81 43 93 53 95
+       C64 97 74 87 71 75
+       L67 69
+       C67 79 61 87 55 86
+       C49 84 49 73 52 65
+       L58 53 L73 53
+       Z"/>
+
+  <!-- Sparkle dots — "pilot stars" -->
+  <circle cx="21" cy="19" r="1.8" fill="rgba(224,231,255,0.55)"/>
+  <circle cx="81" cy="76" r="2.2" fill="rgba(167,139,250,0.45)"/>
+  <circle cx="77" cy="21" r="1.2" fill="rgba(224,231,255,0.40)"/>
+  <circle cx="18" cy="74" r="1.0" fill="rgba(167,139,250,0.30)"/>
+</svg>

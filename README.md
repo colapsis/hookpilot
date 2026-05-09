@@ -1,112 +1,146 @@
-# ⚡ HookPilot
+<div align="center">
+  <br/>
+  <img src="./docs/logo.svg" width="110" alt="HookPilot"/>
+  <h1>HookPilot</h1>
+  <p><strong>Self-hosted webhook inspector, debugger and replayer.</strong><br/>
+  The open-source alternative to RequestBin and Hookdeck — with AI built in.</p>
 
-**Self-hosted webhook inspector, debugger and replayer.**
+  <p>
+    <img alt="License" src="https://img.shields.io/badge/license-MIT-a855f7?style=flat-square"/>
+    <img alt="Python" src="https://img.shields.io/badge/python-3.10+-6366f1?style=flat-square&logo=python&logoColor=white"/>
+    <img alt="Docker" src="https://img.shields.io/badge/docker-ready-0ea5e9?style=flat-square&logo=docker&logoColor=white"/>
+    <img alt="AI" src="https://img.shields.io/badge/AI-LiteLLM%20%7C%20any%20provider-7c3aed?style=flat-square"/>
+    <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.111-009688?style=flat-square&logo=fastapi&logoColor=white"/>
+  </p>
 
-Capture every webhook your services send, inspect headers and body in a live UI, replay requests to any URL, and get notified on Telegram — all in one Docker container with zero cloud dependencies.
+  <p>
+    <a href="#-quick-start">Quick Start</a> ·
+    <a href="#-ai-features">AI Features</a> ·
+    <a href="#-rest-api">REST API</a> ·
+    <a href="#-configuration">Configuration</a>
+  </p>
+
+  <br/>
+  <img src="./docs/banner.svg" width="700" alt="HookPilot banner"/>
+  <br/><br/>
+</div>
 
 ---
 
 ## Why HookPilot?
 
+**RequestBin is dead. Webhook.site has no persistent storage on the free tier. Hookdeck costs $25/month.** HookPilot runs on your own server, stores everything, and ships features none of the paid tools have — including AI payload analysis and automatic handler code generation.
+
 | | HookPilot | RequestBin | Webhook.site | Hookdeck |
-|---|---|---|---|---|
+|---|:---:|:---:|:---:|:---:|
 | Self-hosted | ✅ | ❌ | ❌ | ❌ |
 | Persistent storage | ✅ | ❌ | limited | ✅ |
+| Real-time live feed | ✅ | ✅ | ✅ | ✅ |
 | Request replay | ✅ | ❌ | ❌ | ✅ |
 | Auto-forward | ✅ | ❌ | ❌ | ✅ |
+| AI explain + codegen | ✅ | ❌ | ❌ | ❌ |
 | Telegram alerts | ✅ | ❌ | ❌ | ❌ |
-| Real-time live feed | ✅ | ✅ | ✅ | ✅ |
 | Export as curl | ✅ | ❌ | ✅ | ❌ |
-| Price | **Free** | Free (limited) | Free (limited) | $25/mo |
+| Price | **Free** | Free (dead) | Free (limited) | $25/mo |
 
 ---
 
-## Features
+## ✨ Features
 
-- **🪣 Buckets** — Organize webhooks by project or service; each gets a unique capture URL
-- **⚡ Live feed** — New requests appear in real-time via SSE, no polling, no page reload
-- **🔍 Full inspection** — View method, headers, body (JSON-highlighted), query params
+- **🪣 Buckets** — Named channels, each with its own capture URL (`/w/your-bucket`)
+- **⚡ Live feed** — New requests appear instantly via Server-Sent Events — no polling, no refresh
+- **🔍 Full inspection** — Method, headers, JSON-highlighted body, query params — all at a glance
 - **✨ AI Explain** — One click: AI reads the payload and tells you what happened in plain English
-- **🤖 Handler generator** — AI generates a ready-to-paste handler in Python, JS, TypeScript, Go, PHP or Ruby
-- **↺ Replay** — Resend any captured request to a different URL (great for local dev)
-- **⇒ Auto-forward** — Optionally forward every incoming request to your local server automatically
-- **📋 Export as curl** — One-click curl command for any request
-- **🔔 Telegram notifications** — Get a message when a webhook arrives (optional, per bucket)
-- **🗑️ Request retention** — Configurable per-bucket cap and TTL (default 500 req / 30 days)
-- **🐳 Docker-first** — One command to run, SQLite embedded, no external dependencies
+- **🤖 Handler generator** — AI writes a production-ready handler in Python, JS, TypeScript, Go, PHP or Ruby
+- **↺ Replay** — Resend any captured request to a different URL and see the response + latency
+- **⇒ Auto-forward** — Every incoming request optionally proxied to your local dev server automatically
+- **📋 Export as curl** — Copy any request as a ready-to-run shell command
+- **🔔 Telegram alerts** — Get a message on Telegram when a webhook arrives (per-bucket, optional)
+- **🐳 Docker-first** — `docker compose up` and you're done. SQLite embedded, zero external dependencies
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
-# Clone
 git clone https://github.com/colapsis/hookpilot.git
 cd hookpilot
-
-# Configure (optional)
-cp .env.example .env
-# Edit BASE_URL to your public server address
-
-# Run
+cp .env.example .env          # edit BASE_URL to your server's address
 docker compose up -d
-
-# Open
 open http://localhost:8000
 ```
 
-That's it. No database server, no message broker, no API key.
-
----
-
-## Usage
-
-### 1. Create a bucket
-
-Click **New Bucket**, give it a name (e.g. `stripe-dev`), and optionally:
-- Add a description
-- Set an **auto-forward URL** (all incoming webhooks will be proxied there)
-- Set a **Telegram Chat ID** for notifications
-
-### 2. Point your webhook at the capture URL
-
-```
-POST http://your-server:8000/w/stripe-dev
-```
-
-Any HTTP method works: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`.
-
-### 3. Inspect in real-time
-
-Open the bucket in your browser. New requests appear live as they arrive — click any to inspect headers, body, and query params.
-
-### 4. Replay to your local dev server
-
-Click **Replay**, enter your local URL (e.g. `http://localhost:3000/webhook`), hit **Send**. HookPilot forwards the exact same headers and body and shows you the response status and latency.
-
-### 5. Copy as curl
-
-Click **Copy as curl** to get a ready-to-paste shell command — useful for teammates or CI scripts.
-
----
-
-## AI Features
-
-HookPilot has optional AI-powered features that work with **any LLM provider** via [LiteLLM](https://github.com/BerriAI/litellm).
-
-### Explain
-Click **Explain** on any captured request. The AI instantly tells you:
-- What happened in plain English ("Stripe subscription cancelled — plan Pro, reason: payment_failed")
-- The source service (Stripe, GitHub, Shopify, etc.)
-- The event type
-- The 4–6 most important fields extracted and labelled
-
-### Generate Handler
-Pick a language — Python, JavaScript, TypeScript, Go, PHP, or Ruby — and get a production-ready handler function for that exact payload, with types, field access, and a TODO for your business logic.
-
-### Setup (pick any provider)
+Then point any service at your capture URL:
 
 ```bash
+curl -X POST http://localhost:8000/w/my-bucket \
+  -H "Content-Type: application/json" \
+  -d '{"event": "payment.completed", "amount": 9900}'
+# → {"ok": true, "id": "abc-123"}
+```
+
+Open `http://localhost:8000` to see it appear in real time.
+
+### Without Docker
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+uvicorn app.main:app --reload --port 8000
+```
+
+---
+
+## ✨ AI Features
+
+HookPilot supports **any LLM provider** via [LiteLLM](https://github.com/BerriAI/litellm). Set two env vars and the AI panel appears automatically.
+
+### Explain
+Click **Explain** on any captured request. In ~1 second you get:
+
+> *"Stripe subscription cancelled — plan Pro, customer john@example.com, reason: payment_failed"*
+
+Plus the detected source service, event type, and the most important fields extracted and labelled — no more squinting at raw JSON.
+
+### Generate Handler
+Pick a language and get a ready-to-paste handler for that exact payload:
+
+<details>
+<summary><b>Python example (click to expand)</b></summary>
+
+```python
+from dataclasses import dataclass
+
+# Stripe customer.subscription.deleted — fires when a subscription is cancelled
+@dataclass
+class SubscriptionEvent:
+    id: str
+    customer: str
+    status: str
+    plan_name: str
+    cancel_reason: str
+
+def handle_subscription_cancelled(payload: dict) -> None:
+    event = SubscriptionEvent(
+        id=payload["data"]["object"]["id"],
+        customer=payload["data"]["object"]["customer"],
+        status=payload["data"]["object"]["status"],
+        plan_name=payload["data"]["object"]["plan"]["nickname"],
+        cancel_reason=payload["data"]["object"].get("cancellation_details", {}).get("reason", ""),
+    )
+    # TODO: add your business logic here
+    # e.g. downgrade user, send cancellation email, update database
+```
+</details>
+
+### Setup (any provider)
+
+```bash
+# Groq — fastest, generous free tier
+AI_MODEL=groq/llama-3.1-8b-instant
+GROQ_API_KEY=gsk_...
+
 # OpenAI
 AI_MODEL=gpt-4o-mini
 OPENAI_API_KEY=sk-...
@@ -119,52 +153,68 @@ ANTHROPIC_API_KEY=sk-ant-...
 AI_MODEL=gemini/gemini-2.0-flash
 GEMINI_API_KEY=...
 
-# Groq (fast + generous free tier)
-AI_MODEL=groq/llama-3.1-8b-instant
-GROQ_API_KEY=...
-
 # Mistral
 AI_MODEL=mistral/mistral-small-latest
 MISTRAL_API_KEY=...
 
-# Local Ollama (no API key needed)
+# Local Ollama (no key, no cost)
 AI_MODEL=ollama/llama3
 ```
 
-See `.env.example` for the full list. The AI features are completely optional — if `AI_MODEL` is not set the buttons are hidden and no API is ever called.
+> **AI is completely optional.** If `AI_MODEL` is not set, the buttons are hidden and no API is ever called.
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
-All settings via environment variables (or `.env` file):
+All settings via environment variables or `.env` file:
 
 | Variable | Default | Description |
 |---|---|---|
 | `BASE_URL` | `http://localhost:8000` | Public URL shown in webhook links |
 | `AI_MODEL` | _(empty)_ | LiteLLM model string — enables AI features |
-| `TELEGRAM_BOT_TOKEN` | _(empty)_ | Bot token from @BotFather (enables notifications) |
-| `REQUEST_RETENTION_DAYS` | `30` | Delete requests older than N days (0 = keep forever) |
-| `MAX_REQUESTS_PER_BUCKET` | `500` | Cap per bucket, oldest removed first |
-| `MAX_BODY_SIZE` | `524288` | Max captured body size in bytes (512 KB) |
-| `DATABASE_PATH` | `./data/hookpilot.db` | SQLite file path |
+| `TELEGRAM_BOT_TOKEN` | _(empty)_ | Telegram bot token from @BotFather |
+| `REQUEST_RETENTION_DAYS` | `30` | Auto-delete requests older than N days (0 = keep forever) |
+| `MAX_REQUESTS_PER_BUCKET` | `500` | Per-bucket cap; oldest deleted first |
+| `MAX_BODY_SIZE` | `524288` | Max captured body in bytes (512 KB) |
+| `DATABASE_PATH` | `./data/hookpilot.db` | SQLite file location |
+
+Provider API keys (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, etc.) are read directly from the environment by LiteLLM. See [`.env.example`](.env.example) for the full list.
 
 ---
 
-## Running without Docker
+## 🌐 Deploying on a VPS
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-uvicorn app.main:app --reload --port 8000
+echo "BASE_URL=https://hooks.yourdomain.com" >> .env
+docker compose up -d
+```
+
+**nginx reverse proxy** (required for SSE live feed):
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name hooks.yourdomain.com;
+
+    location / {
+        proxy_pass         http://127.0.0.1:8000;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+
+        # Critical for Server-Sent Events (live feed)
+        proxy_buffering    off;
+        proxy_cache        off;
+        proxy_read_timeout 3600s;
+    }
+}
 ```
 
 ---
 
-## REST API
+## 🔌 REST API
 
-HookPilot ships a REST API (documented at `/api/docs`):
+Interactive docs available at `/api/docs` on your running instance.
 
 ```
 GET    /              Dashboard
@@ -172,74 +222,64 @@ GET    /b/{slug}       Bucket view (live)
 GET    /r/{id}         Request detail
 
 POST   /api/buckets            Create bucket
-PATCH  /api/buckets/{slug}     Update bucket
+PATCH  /api/buckets/{slug}     Update settings
 DELETE /api/buckets/{slug}     Delete bucket
 
 GET    /api/buckets/{slug}/requests    List requests
 GET    /api/requests/{id}              Get request + replays
-DELETE /api/requests/{id}             Delete request
-GET    /api/requests/{id}/curl         Export as curl
+DELETE /api/requests/{id}              Delete request
+GET    /api/requests/{id}/curl         Export as curl command
 POST   /api/requests/{id}/replay       Replay to URL
+POST   /api/requests/{id}/explain      AI: explain payload   ✨
+POST   /api/requests/{id}/codegen      AI: generate handler  🤖
+GET    /api/ai/status                  AI enabled + model
+GET    /api/stream/{slug}              SSE live event stream
+GET    /api/stats                      Global stats
 
-GET    /api/stream/{slug}      SSE live event stream
-GET    /api/stats              Global stats
-
-ANY    /w/{slug}               Webhook capture endpoint
+ANY    /w/{slug}               ← Webhook capture endpoint
 ```
 
 ---
 
-## Deployment on a VPS
+## 🛠 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | [FastAPI](https://fastapi.tiangolo.com/) + [aiosqlite](https://github.com/omnilib/aiosqlite) |
+| Frontend | [htmx](https://htmx.org/) + [Tailwind CSS](https://tailwindcss.com/) (CDN, no build step) |
+| AI | [LiteLLM](https://github.com/BerriAI/litellm) — 100+ providers |
+| Realtime | Server-Sent Events (SSE) |
+| Database | SQLite (embedded, no server) |
+| Notifications | Telegram Bot API |
+| Syntax highlighting | [Prism.js](https://prismjs.com/) |
+
+---
+
+## 🤝 Contributing
+
+Issues and PRs are welcome. To run locally:
 
 ```bash
-# Set your public URL
-echo "BASE_URL=https://hooks.yourdomain.com" > .env
-
-# Run behind nginx (recommended)
-docker compose up -d
-```
-
-Example nginx config:
-```nginx
-server {
-    listen 443 ssl;
-    server_name hooks.yourdomain.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        # Required for SSE (live feed)
-        proxy_buffering off;
-        proxy_cache off;
-        proxy_read_timeout 3600;
-    }
-}
+git clone https://github.com/colapsis/hookpilot.git
+cd hookpilot
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
 ```
 
 ---
 
-## Tech Stack
+## 📄 License
 
-- **Backend**: [FastAPI](https://fastapi.tiangolo.com/) + [aiosqlite](https://github.com/omnilib/aiosqlite)
-- **Frontend**: [htmx](https://htmx.org/) + [Tailwind CSS](https://tailwindcss.com/) (CDN, no build step)
-- **Syntax highlighting**: [Prism.js](https://prismjs.com/)
-- **Notifications**: Telegram Bot API
-- **Real-time**: Server-Sent Events (SSE)
+[MIT](LICENSE) — free to use, modify and self-host.
 
 ---
 
-## Contributing
-
-PRs welcome. To run tests:
-
-```bash
-pip install -r requirements.txt pytest httpx
-pytest
-```
-
----
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+<div align="center">
+  <p>
+    <a href="https://github.com/colapsis/hookpilot/stargazers">
+      <img alt="GitHub stars" src="https://img.shields.io/github/stars/colapsis/hookpilot?style=social"/>
+    </a>
+  </p>
+  <sub>If HookPilot saves you time, a ⭐ on GitHub goes a long way.</sub>
+</div>

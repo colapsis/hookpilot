@@ -26,6 +26,8 @@ Capture every webhook your services send, inspect headers and body in a live UI,
 - **🪣 Buckets** — Organize webhooks by project or service; each gets a unique capture URL
 - **⚡ Live feed** — New requests appear in real-time via SSE, no polling, no page reload
 - **🔍 Full inspection** — View method, headers, body (JSON-highlighted), query params
+- **✨ AI Explain** — One click: AI reads the payload and tells you what happened in plain English
+- **🤖 Handler generator** — AI generates a ready-to-paste handler in Python, JS, TypeScript, Go, PHP or Ruby
 - **↺ Replay** — Resend any captured request to a different URL (great for local dev)
 - **⇒ Auto-forward** — Optionally forward every incoming request to your local server automatically
 - **📋 Export as curl** — One-click curl command for any request
@@ -88,6 +90,51 @@ Click **Copy as curl** to get a ready-to-paste shell command — useful for team
 
 ---
 
+## AI Features
+
+HookPilot has optional AI-powered features that work with **any LLM provider** via [LiteLLM](https://github.com/BerriAI/litellm).
+
+### Explain
+Click **Explain** on any captured request. The AI instantly tells you:
+- What happened in plain English ("Stripe subscription cancelled — plan Pro, reason: payment_failed")
+- The source service (Stripe, GitHub, Shopify, etc.)
+- The event type
+- The 4–6 most important fields extracted and labelled
+
+### Generate Handler
+Pick a language — Python, JavaScript, TypeScript, Go, PHP, or Ruby — and get a production-ready handler function for that exact payload, with types, field access, and a TODO for your business logic.
+
+### Setup (pick any provider)
+
+```bash
+# OpenAI
+AI_MODEL=gpt-4o-mini
+OPENAI_API_KEY=sk-...
+
+# Anthropic Claude
+AI_MODEL=claude-haiku-3-5-20251001
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Google Gemini
+AI_MODEL=gemini/gemini-2.0-flash
+GEMINI_API_KEY=...
+
+# Groq (fast + generous free tier)
+AI_MODEL=groq/llama-3.1-8b-instant
+GROQ_API_KEY=...
+
+# Mistral
+AI_MODEL=mistral/mistral-small-latest
+MISTRAL_API_KEY=...
+
+# Local Ollama (no API key needed)
+AI_MODEL=ollama/llama3
+```
+
+See `.env.example` for the full list. The AI features are completely optional — if `AI_MODEL` is not set the buttons are hidden and no API is ever called.
+
+---
+
 ## Configuration
 
 All settings via environment variables (or `.env` file):
@@ -95,6 +142,7 @@ All settings via environment variables (or `.env` file):
 | Variable | Default | Description |
 |---|---|---|
 | `BASE_URL` | `http://localhost:8000` | Public URL shown in webhook links |
+| `AI_MODEL` | _(empty)_ | LiteLLM model string — enables AI features |
 | `TELEGRAM_BOT_TOKEN` | _(empty)_ | Bot token from @BotFather (enables notifications) |
 | `REQUEST_RETENTION_DAYS` | `30` | Delete requests older than N days (0 = keep forever) |
 | `MAX_REQUESTS_PER_BUCKET` | `500` | Cap per bucket, oldest removed first |

@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from app.database import get_db
 from app import events
 from app.services.replay import do_replay
+from app.services import ai as ai_service
 
 router = APIRouter(prefix="/api")
 
@@ -273,3 +274,63 @@ async def global_stats():
         return {"buckets": buckets, "total_requests": total, "today": today_count}
     finally:
         await db.close()
+
+
+# ── AI ─────────────────────────────────────────────────────────────────────
+
+@router.get("/ai/status")
+async def ai_status():
+    from app.config import AI_MODEL
+    return {"enabled": ai_service.ai_enabled(), "model": AI_MODEL or None}
+
+
+@router.post("/requests/{request_id}/explain")
+async def explain_request(request_id: str):
+    if not ai_service.ai_enabled():
+        raise HTTPException(503, "AI not configured — set AI_MODEL and provider API key in .env")
+
+    db = await get_db()
+    try:
+        async with db.execute("SELECT * FROM requests WHERE id = ?", (request_id,)) as cur:
+            row = await cur.fetchone()
+        if not row:
+            raise HTTPException(404, "Request not found")
+        req = dict(row)
+    finally:
+        await db.close()
+
+    return await ai_service.analyze_webhook(
+        method=req["method"],
+        path=req["path"],
+        headers=json.loads(req["headers"]),
+        body=req["body"],
+        content_type=req["content_type"],
+    )
+
+
+class CodegenBody(BaseModel):
+    language: str = "python"
+
+
+@router.post("/requests/{request_id}/codegen")
+async def codegen_request(request_id: str, body: CodegenBody):
+    if not ai_service.ai_enabled():
+        raise HTTPException(503, "AI not configured — set AI_MODEL and provider API key in .env")
+
+    db = await get_db()
+    try:
+        async with db.execute("SELECT * FROM requests WHERE id = ?", (request_id,)) as cur:
+            row = await cur.fetchone()
+        if not row:
+            raise HTTPException(404, "Request not found")
+        req = dict(row)
+    finally:
+        await db.close()
+
+    code = await ai_service.generate_handler(
+        method=req["method"],
+        path=req["path"],
+        body=req["body"],
+        language=body.language,
+    )
+    return {"code": code, "language": body.language}

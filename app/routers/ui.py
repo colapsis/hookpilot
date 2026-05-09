@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.database import get_db
 from app.config import BASE_URL
+from app.services.ai import ai_enabled
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -44,6 +45,7 @@ def _status_color(status: int | None) -> str:
 templates.env.globals["method_color"] = _method_color
 templates.env.globals["status_color"] = _status_color
 templates.env.globals["base_url"] = BASE_URL
+templates.env.globals["ai_enabled"] = ai_enabled
 templates.env.filters["pretty_json"] = _pretty_json
 
 
